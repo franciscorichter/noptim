@@ -1,0 +1,642 @@
+1
+
+Stochastic Methods – Week 13
+
+Week #13: Statistical Learning and Stochastic Inference
+Notes by: Francisco Richter
+May 3, 2025
+
+Aspect
+
+Structured (Traditional)
+
+Unstructured (AI/ML)
+
+Input domain
+
+X = Rp with schema
+
+U arbitrary (text, images, etc.), U ∼ PU
+
+Mapping
+
+Deterministic f : X → Y
+
+bn
+Learned fθ̂ (φ(u)), θ̂ = arg min R
+
+Objective
+
+None (hand-coded)
+
+Empirical
+risk
+1 P
+ℓ(fθ (φ(ui )), yi )
+n
+
+Correctness
+
+supx |f (x) − y∗ (x)| = 0
+
+Statistical: R(θ̂) ≈ minθ R(θ)
+
+Output
+
+Exact y = f (x), reproducible
+
+Estimate ŷ = fθ̂ (φ(u)), has Var[ŷ]
+
+Reproducibility
+
+∀x, same y each run
+
+Depends on random seed / retraining;
+may vary if θ̂ differs
+
+Validation
+
+Unit/integration tests
+
+Estimate generalization gap |R(θ̂) −
+b n (θ̂)|
+R
+
+Monitoring
+
+Uptime, exception rates
+
+prod
+Drift: monitor D(PU ∥PU
+), test risk in
+production
+
+Failure mode
+
+Crash or logic bug
+
+Elevated error rate Err = E[1{fθ̂ (U) ̸=
+Y}]
+
+b n (θ)
+R
+
+=
+
+Table 1: Deterministic vs. Probabilistic Paradigms under Structured and Unstructured Inputs
+
+1
+
+Stochastic Program
+
+To bridge the gap between deterministic and probabilistic paradigms, we introduce the stochastic program
+abstraction, which formally separates algorithmic logic, parameters, and randomness.
+Definition. Program
+A program is a triple (M, θ, Pε ) where
+M :I ×Ω→O
+so that for input X = x,
+
+(deterministic map),
+Y = Mθ (x, ε),
+
+θ ∈ Θ (parameters),
+Y | X = x ∼ pθ (· | x).
+
+ε ∼ Pε
+
+(randomness),
+
+2
+
+Stochastic Methods – Week 13
+
+Intuition: Stochastic program components
+Think of a stochastic program as a recipe with three distinct parts: the cooking procedure (the
+deterministic map M ), the ingredient proportions (parameters θ), and the inherent variability in
+cooking conditions (randomness ε). Even with the same recipe and proportions, slight variations in
+temperature or ingredient quality lead to different outcomes each time.
+Remark.
+This abstraction clarifies roles:
+• M : the fixed computation or algorithm,
+• θ: the unknown quantities to be learned,
+• ε: the source of nondeterminism or noise.
+"Learning" = estimating θ; "Inference" = assessing uncertainty in θ.
+Example 1.1 (Binary Classifier). A convolutional neural network with weights θ and dropout mask ε
+defines
+pθ (y | x) = softmax(fθ (x; ε)).
+Training maximizes the joint likelihood over data, while dropout regularizes by introducing randomness
+within M .
+Example 1.2 (Bayesian Linear Regression). In Bayesian linear regression, we have
+Mθ (x, ε) = θT x + ε,
+
+ε ∼ N (0, σ 2 ),
+
+which induces the conditional distribution
+Y | X = x ∼ N (θT x, σ 2 ).
+The parameters θ are estimated from data, while the noise ε captures inherent variability in the relationship
+between X and Y .
+The stochastic program abstraction provides several benefits:
+• Separates concerns: Distinguishes between algorithmic logic, learned parameters, and randomness
+• Enables formal analysis: Allows rigorous treatment of uncertainty and error
+• Bridges paradigms: Connects traditional programming with statistical learning
+• Clarifies learning objectives: Focuses on estimating parameters rather than designing algorithms
+
+2
+
+Estimation Principles
+
+We now explore fundamental principles for estimating parameters in statistical models. These principles
+form the foundation for most machine learning algorithms.
+
+3
+
+Stochastic Methods – Week 13
+
+2.1
+
+Maximum Likelihood Estimation
+
+Maximum Likelihood Estimation (MLE) is a method for estimating the parameters of a statistical model
+by maximizing the likelihood function.
+Definition. Maximum Likelihood Estimation
+Given independent and identically distributed (i.i.d.) observations X1 , X2 , . . . , Xn from a distribution
+with probability density function f (x; θ), the log-likelihood function is
+n
+X
+
+ℓn (θ) =
+
+log f (Xi ; θ),
+
+i=1
+
+and the maximum likelihood estimator (MLE) is
+θ̂MLE = arg max ℓn (θ).
+θ∈Θ
+
+Intuition: Maximum likelihood
+MLE finds the parameter values that make the observed data most probable. It’s like adjusting the
+settings of a camera until the resulting photo looks as close as possible to what you’re seeing with
+your own eyes. The "best" settings are those that produce the image most similar to reality.
+Theorem 2.1 (Properties of MLE). Under regularity conditions (identifiability, smoothness, non-singular
+Fisher information I(θ)), the MLE has the following properties:
+• Consistency: θ̂n → θ0 in probability as n → ∞.
+√
+d
+• Asymptotic normality: n(θ̂n − θ0 ) → N (0, I(θ0 )−1 ) as n → ∞.
+• Efficiency: Achieves the Cramér-Rao lower bound among unbiased estimators.
+Remark.
+The Fisher information
+
+h
+
+I(θ) = Eθ −∇2 log f (X; θ)
+
+i
+
+quantifies how much each observation informs about θ; its inverse gives the asymptotic covariance of θ̂n .
+Example 2.1 (MLE for Normal Distribution). Consider i.i.d. observations X1 , X2 , . . . , Xn from N (µ, σ 2 ).
+The log-likelihood is
+n
+n
+n
+1 X
+2
+2
+(Xi − µ)2 .
+ℓn (µ, σ ) = − log(2π) − log(σ ) − 2
+2
+2
+2σ i=1
+Taking partial derivatives and setting them to zero:
+n
+∂ℓn
+1 X
+= 2
+(Xi − µ) = 0
+∂µ
+σ i=1
+
+(1)
+
+n
+∂ℓn
+n
+1 X
+=
+−
++
+(Xi − µ)2 = 0
+∂σ 2
+2σ 2 2σ 4 i=1
+
+(2)
+
+Solving these equations yields the MLEs:
+µ̂MLE =
+
+n
+1X
+Xi = X̄
+n i=1
+
+(3)
+
+2
+σ̂MLE
+=
+
+n
+1X
+(Xi − µ̂)2
+n i=1
+
+(4)
+
+4
+
+Stochastic Methods – Week 13
+
+2.2
+
+Least Squares Estimation
+
+Least Squares Estimation is a method for estimating parameters by minimizing the sum of squared
+differences between observed and predicted values.
+Definition. Least Squares Estimation
+Given a model Yi = fθ (Xi ) + εi with εi ∼ N (0, σ 2 ), the least squares estimator is
+θ̂LS = arg min
+θ
+
+n
+X
+
+[Yi − fθ (Xi )]2 .
+
+i=1
+
+Remark.
+For models with normally distributed errors, least squares estimation is equivalent to maximum likelihood
+estimation.
+Example 2.2 (Linear Regression). For the linear model fθ (x) = β0 + xT β, the least squares estimator is
+β̂ = (X T X)−1 X T y,
+where X is the design matrix with rows XiT and y is the vector of responses Yi .
+Theorem 2.2 (Gauss-Markov Theorem). Under the assumptions of the linear model with uncorrelated
+errors having equal variance, the least squares estimator is the Best Linear Unbiased Estimator (BLUE),
+meaning it has the smallest variance among all linear unbiased estimators.
+
+2.3
+
+Regularization
+
+Regularization techniques address overfitting by adding a penalty term to the objective function, effectively
+shrinking parameter estimates toward zero or some other reference value.
+Definition. Regularized Estimation
+A regularized estimator minimizes the penalized negative log-likelihood or sum of squares:
+θ̂λ = arg min {−ℓn (θ) + λR(θ)} ,
+θ
+
+where λ > 0 is the regularization parameter and R(θ) is the penalty function.
+Common penalty functions include:
+• Ridge penalty: R(θ) = ∥θ∥22 (sum of squared parameters)
+• Lasso penalty: R(θ) = ∥θ∥1 (sum of absolute parameters)
+• Elastic Net: R(θ) = α∥θ∥1 + (1 − α)∥θ∥22 (combination of L1 and L2)
+Intuition: Regularization
+Regularization is like adding a cost for complexity. Without regularization, a model might create an
+overly complex explanation that perfectly fits the training data but fails to generalize. Regularization
+penalizes this complexity, forcing the model to find simpler explanations that might be slightly less
+accurate on training data but generalize better to new data.
+Remark.
+From a Bayesian viewpoint, regularization corresponds to imposing a prior distribution on the parameters:
+
+5
+
+Stochastic Methods – Week 13
+
+• Ridge regression ↔ Gaussian prior θ ∼ N (0, τ 2 I)
+• Lasso regression ↔ Laplace prior p(θ) ∝ exp(−λ∥θ∥1 )
+The regularization parameter λ controls the bias-variance trade-off.
+Example 2.3 (Ridge Regression). For the linear model with ridge penalty, the estimator is
+β̂ridge = (X T X + λI)−1 X T y.
+The ridge penalty shrinks all coefficients toward zero, but never exactly to zero.
+Example 2.4 (Lasso Regression). For the linear model with lasso penalty, there is no closed-form solution,
+but efficient algorithms like coordinate descent can find the solution. The lasso has the property of variable
+selection: it can shrink some coefficients exactly to zero, effectively removing those features from the model.
+Practice Problems
+1. Derive the MLE for the parameter p of a Bernoulli distribution based on n independent
+observations.
+2. Show that for the linear regression model with normally distributed errors, the least squares
+estimator is identical to the maximum likelihood estimator.
+3. Consider a ridge regression problem with design matrix X and response vector y. How does the
+effective degrees of freedom of the model change as the regularization parameter λ increases
+from 0 to ∞?
+Solution:
+For problem 1: Let X1 , X2 , . . . , Xn be i.i.d. Bernoulli(p) random variables. The likelihood function is
+L(p) =
+
+n
+Y
+
+P
+
+pXi (1 − p)1−Xi = p
+
+Xi
+
+P
+
+(1 − p)n−
+
+Xi
+
+i=1
+
+The log-likelihood is
+ℓ(p) =
+
+n
+X
+
+!
+
+Xi log p + n −
+
+i=1
+
+n
+X
+
+!
+
+Xi log(1 − p)
+
+i=1
+
+Taking the derivative with respect to p and setting it to zero:
+dℓ
+=
+dp
+
+Xi n − Xi
+−
+=0
+p
+1−p
+
+P
+
+Solving for p gives the MLE:
+p̂MLE =
+
+3
+
+P
+
+n
+1X
+Xi = X̄
+n i=1
+
+Bootstrap Inference
+
+The bootstrap is a powerful resampling technique for estimating the sampling distribution of a statistic
+and constructing confidence intervals when analytical expressions are unavailable or complex.
+
+6
+
+Stochastic Methods – Week 13
+
+3.1
+
+The Bootstrap Principle
+
+Definition. Nonparametric Bootstrap
+Given data X1 , X2 , . . . , Xn and an estimator θ̂ = t(X1 , X2 , . . . , Xn ):
+∗(b)
+∗(b)
+∗(b)
+1. For b = 1, 2, . . . , B, draw a bootstrap sample (X1 , X2 , . . . , Xn ) by sampling with replacement
+from {Xi }.
+∗(b)
+∗(b)
+∗(b)
+2. Compute the bootstrap replicate θ̂∗(b) = t(X1 , X2 , . . . , Xn ).
+The empirical distribution of {θ̂∗(b) }B
+b=1 approximates the sampling distribution of θ̂.
+Intuition: Bootstrap
+The bootstrap treats the observed data as a stand-in for the entire population. By resampling from
+this data (with replacement), we simulate drawing new samples from the population. The variation
+in statistics calculated from these resamples approximates how the statistic would vary if we could
+repeatedly sample from the true population.
+
+3.2
+
+Bootstrap Standard Error and Confidence Intervals
+
+The bootstrap standard error is estimated as:
+c boot
+SE
+
+v
+u
+u
+=t
+
+B
+1 X
+¯
+(θ̂∗(b) − θ̂∗ )2 ,
+B − 1 b=1
+
+B
+
+1 X ∗(b)
+¯
+θ̂∗ =
+θ̂
+B b=1
+
+Several methods exist for constructing bootstrap confidence intervals:
+3.2.1
+
+Percentile Method
+
+The percentile method uses quantiles of the bootstrap distribution:
+CI1−α = [θ̂∗(α/2) , θ̂∗(1−α/2) ]
+where θ̂∗(q) is the q-quantile of the bootstrap distribution.
+3.2.2
+
+Basic Bootstrap Method
+
+The basic bootstrap method uses the bootstrap distribution to estimate the sampling distribution of θ̂ − θ:
+CI1−α = [2θ̂ − θ̂∗(1−α/2) , 2θ̂ − θ̂∗(α/2) ]
+3.2.3
+
+BCa Method (Bias-Corrected and Accelerated)
+
+The BCa method adjusts for bias and non-constant variance:
+CI1−α = [θ̂∗(a1 ) , θ̂∗(a2 ) ]
+where
+z0 + zα/2
+a1 = Φ z0 +
+1 − a(z0 + zα/2 )
+
+!
+
+z0 + z1−α/2
+a2 = Φ z0 +
+1 − a(z0 + z1−α/2 )
+
+(5)
+!
+
+(6)
+
+Stochastic Methods – Week 13
+
+7
+
+Algorithm 1 Nonparametric Bootstrap for Confidence Intervals
+Require: Data {X1 , X2 , . . . , Xn }, estimator function t(·), number of bootstrap samples B, confidence
+level 1 − α
+1: Compute the original estimate θ̂ = t(X1 , X2 , . . . , Xn )
+2: for b = 1 to B do
+∗(b)
+∗(b)
+∗(b)
+3:
+Draw a bootstrap sample {X1 , X2 , . . . , Xn } by sampling with replacement from {Xi }
+∗(b)
+∗(b)
+∗(b)
+4:
+Compute bootstrap replicate θ̂∗(b) = t(X1 , X2 , . . . , Xn )
+5: end for
+6: Sort the bootstrap replicates: θ̂ ∗(1) ≤ θ̂ ∗(2) ≤ . . . ≤ θ̂ ∗(B)
+7: Compute percentile confidence interval: [θ̂ ∗(⌊Bα/2⌋) , θ̂ ∗(⌈B(1−α/2)⌉) ]
+8: return Bootstrap distribution {θ̂ ∗(b) }B
+b=1 and confidence interval
+with z0 and a being the bias-correction and acceleration parameters.
+Remark.
+The bootstrap is model-agnostic and often quite accurate for moderate sample sizes. However, it can be
+computationally intensive, and adjustments (bias correction, BCa intervals) improve accuracy in small
+samples or when the statistic has high bias or skewness.
+
+3.3
+
+Parametric Bootstrap
+
+The parametric bootstrap assumes a parametric model for the data:
+Definition. Parametric Bootstrap
+Given data X1 , X2 , . . . , Xn and a parametric model Fθ :
+1. Estimate θ̂ from the original data.
+∗(b)
+∗(b)
+∗(b)
+2. For b = 1, 2, . . . , B, generate a bootstrap sample (X1 , X2 , . . . , Xn ) from the fitted model Fθ̂ .
+3. Compute the bootstrap replicate θ̂∗(b) from the bootstrap sample.
+Example 3.1 (Bootstrap for Regression Coefficients). Consider a linear regression model Y = Xβ + ε
+with β̂ = (X T X)−1 X T y. To construct a bootstrap confidence interval for βj :
+∗(b)
+1. Compute residuals ε̂i = yi − xTi β̂ 2. For b = 1 to B: a. Resample residuals ε̂i with replacement
+∗(b)
+∗(b)
+b. Generate bootstrap responses yi
+= xTi β̂ + ε̂i
+c. Compute β̂ ∗(b) = (X T X)−1 X T y ∗(b) 3. Use the
+∗(b) B
+distribution of {β̂j }b=1 to construct confidence intervals for βj
+Practice Problems
+1. Implement the nonparametric bootstrap to estimate the standard error and construct a 95%
+confidence interval for the median of a dataset.
+2. Compare the coverage properties of percentile, basic, and BCa bootstrap confidence intervals
+for the correlation coefficient between two variables with a sample size of n = 30.
+3. Explain why the bootstrap might fail for estimating the maximum of a uniform distribution.
+Propose a modification to improve its performance in this case.
+
+8
+
+Stochastic Methods – Week 13
+
+4
+
+Model Gallery
+
+We now present a spectrum of statistical models, each with increasing flexibility and complexity. These
+models form the foundation of modern statistical learning and inference.
+
+4.1
+
+Linear Regression
+
+Linear regression models the relationship between a response variable and one or more predictor variables
+as a linear function.
+Definition. Linear Regression Model
+The linear regression model is defined as:
+Y = Xβ + ε,
+
+ε ∼ N (0, σ 2 I)
+
+where Y ∈ Rn is the response vector, X ∈ Rn×p is the design matrix, β ∈ Rp is the coefficient vector, and
+ε ∈ Rn is the error vector.
+• Estimation: Ordinary Least Squares (OLS) β̂ = (X T X)−1 X T y
+• Inference: β̂ ∼ N (β, σ 2 (X T X)−1 )
+• Prediction: ŷ = xT β̂ with prediction variance Var(ŷ) = σ 2 xT (X T X)−1 x
+Example 4.1 (Housing Price Prediction). To predict housing prices, we might use a linear regression
+model with predictors such as square footage, number of bedrooms, and neighborhood median income. The
+coefficient for square footage represents the expected increase in price for each additional square foot,
+holding other variables constant.
+
+4.2
+
+Logistic Regression
+
+Logistic regression models the probability of a binary outcome as a function of predictor variables.
+Definition. Logistic Regression Model
+The logistic regression model is defined as:
+Pr(Y = 1 | x) =
+
+1
+= σ(xT β)
+1 + e−xT β
+
+where σ(z) = 1+e1−z is the logistic (sigmoid) function.
+• Estimation: Maximum Likelihood using Iteratively Reweighted Least Squares (IRLS):
+β ← (X T W X)−1 X T W z
+i −πi
+where Wii = πi (1 − πi ) and zi = ηi + πiy(1−π
+i)
+
+• Inference: β̂ ≈ N (β, (X T W X)−1 )
+• Prediction: π̂ = σ(xT β̂)
+Example 4.2 (Credit Default Prediction). Logistic regression can predict the probability of a customer
+defaulting on a loan based on features like credit score, income, and debt-to-income ratio. The coefficients
+indicate how each feature affects the log-odds of default.
+
+9
+
+Stochastic Methods – Week 13
+
+4.3
+
+Generalized Linear Models (GLMs)
+
+GLMs extend linear regression to handle response variables with non-normal distributions through a link
+function.
+Definition. Generalized Linear Model
+A GLM consists of three components:
+1. A random component: The response variable Y follows an exponential family distribution
+yθi − b(θi )
+p(y; θi , ϕ) = exp
++ c(y, ϕ)
+ϕ
+
+
+
+
+2. A systematic component: The linear predictor ηi = xTi β
+3. A link function: g(µi ) = ηi where µi = E[Yi ] = b′ (θi )
+Common GLMs include:
+• Linear regression: Normal distribution with identity link
+• Logistic regression: Binomial dis
+(Content truncated due to size limit. Use line ranges to read in chunks)

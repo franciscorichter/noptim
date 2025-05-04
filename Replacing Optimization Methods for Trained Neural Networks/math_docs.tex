@@ -1,0 +1,141 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+
+\title{Mathematical Documentation: Neural Networks for Linear Programming}
+\author{Manus AI}
+\date{May 2025}
+
+\begin{document}
+
+\maketitle
+
+\section{Linear Programming (LP) Formulation}
+
+The standard form Linear Programming (LP) problem considered in this project is defined as follows:
+
+\begin{equation}
+\begin{aligned}
+& \underset{\mathbf{x}}{\text{minimize}} & & \mathbf{c}^T \mathbf{x} \\
+& \text{subject to} & & \mathbf{A} \mathbf{x} = \mathbf{b} \\
+& & & \mathbf{x} \ge \mathbf{0}
+\end{aligned}
+\end{equation}
+
+Where:
+\begin{itemize}
+    \item $\mathbf{x} \in \mathbb{R}^n$ is the vector of decision variables.
+    \item $\mathbf{c} \in \mathbb{R}^n$ is the vector of objective function coefficients.
+    \item $\mathbf{A} \in \mathbb{R}^{m \times n}$ is the constraint matrix.
+    \item $\mathbf{b} \in \mathbb{R}^m$ is the vector of constraint right-hand side values.
+    \item The inequality $\mathbf{x} \ge \mathbf{0}$ implies that each element $x_i$ of $\mathbf{x}$ must be non-negative ($x_i \ge 0$ for $i=1, \dots, n$).
+\end{itemize}
+
+The goal is to find the optimal vector $\mathbf{x}^*$ that minimizes the objective function $\mathbf{c}^T \mathbf{x}$ while satisfying all constraints.
+
+\section{Neural Network (NN) Architecture}
+
+A Multi-Layer Perceptron (MLP) is proposed as the primary architecture for learning the mapping from LP problem parameters to the optimal solution.
+
+\subsection{Input Representation}
+The input to the NN, denoted as $\mathbf{z}$, is a flattened vector representation of the LP problem parameters $(\mathbf{c}, \mathbf{A}, \mathbf{b})$. Assuming fixed dimensions $n$ for $\mathbf{x}$ and $m$ for $\mathbf{b}$, the input vector $\mathbf{z}$ is constructed by concatenating $\mathbf{c}$, the flattened matrix $\mathbf{A}$ (e.g., row-major or column-major), and $\mathbf{b}$.
+
+\begin{equation}
+\mathbf{z} = \text{concat}(\mathbf{c}, \text{flatten}(\mathbf{A}), \mathbf{b}) \in \mathbb{R}^{n + mn + m}
+\end{equation}
+
+\subsection{Network Structure}
+The MLP consists of an input layer, one or more hidden layers, and an output layer.
+\begin{itemize}
+    \item \textbf{Input Layer:} Has $d_{in} = n + mn + m$ neurons, corresponding to the dimension of the input vector $\mathbf{z}$.
+    \item \textbf{Hidden Layers:} A sequence of $L$ hidden layers. Each layer $l \in \{1, \dots, L\}$ has $d_l$ neurons and applies an affine transformation followed by a non-linear activation function $\sigma_l$ (e.g., ReLU: $\sigma(a) = \max(0, a)$).
+    \begin{equation}
+    \mathbf{h}_l = \sigma_l(\mathbf{W}_l \mathbf{h}_{l-1} + \mathbf{b}_l)
+    \end{equation}
+    where $\mathbf{h}_0 = \mathbf{z}$, $\mathbf{W}_l$ is the weight matrix, and $\mathbf{b}_l$ is the bias vector for layer $l$.
+    \item \textbf{Output Layer:} Has $d_{out} = n$ neurons, corresponding to the dimension of the decision variable vector $\mathbf{x}$. A suitable activation function $\sigma_{out}$ (e.g., linear or ReLU) is used to produce the predicted solution $\mathbf{x}_{pred}$.
+    \begin{equation}
+    \mathbf{x}_{pred} = \sigma_{out}(\mathbf{W}_{out} \mathbf{h}_L + \mathbf{b}_{out})
+    \end{equation}
+    Using ReLU ($\sigma_{out}(a) = \max(0, a)$) can help enforce the non-negativity constraint $\mathbf{x} \ge \mathbf{0}$, although feasibility regarding $\mathbf{A}\mathbf{x} = \mathbf{b}$ is not guaranteed by the architecture alone.
+\end{itemize}
+The specific number of hidden layers ($L$) and neurons per layer ($d_l$) are hyperparameters to be determined during experimentation.
+
+\section{Loss Function}
+
+The primary objective during training is to minimize the difference between the NN's predicted solution $\mathbf{x}_{pred}$ and the true optimal solution $\mathbf{x}^*$ obtained from a traditional LP solver. The Mean Squared Error (MSE) is proposed as the main loss function:
+
+\begin{equation}
+\mathcal{L}_{MSE}(\mathbf{x}^*, \mathbf{x}_{pred}) = \frac{1}{n} \sum_{i=1}^{n} (x_i^* - x_{pred, i})^2 = \frac{1}{n} \| \mathbf{x}^* - \mathbf{x}_{pred} \|_2^2
+\end{equation}
+
+Given a dataset of $N$ LP instances and their solutions $\{ (\mathbf{z}^{(j)}, \mathbf{x}^{*(j)}) \}_{j=1}^N$, the total training loss over the dataset is the average MSE:
+
+\begin{equation}
+\mathcal{L}_{total} = \frac{1}{N} \sum_{j=1}^{N} \mathcal{L}_{MSE}(\mathbf{x}^{*(j)}, f_{NN}(\mathbf{z}^{(j)}))
+\end{equation}
+
+where $f_{NN}(\mathbf{z}^{(j)})$ represents the output $\mathbf{x}_{pred}^{(j)}$ of the neural network for input $\mathbf{z}^{(j)}$.
+
+\subsection*{Potential Extensions}
+Additional loss terms could be incorporated to explicitly penalize constraint violations or deviations in the objective function value:
+\begin{itemize}
+    \item \textbf{Feasibility Loss:} Penalize violations of $\mathbf{A}\mathbf{x} = \mathbf{b}$.
+    \begin{equation}
+    \mathcal{L}_{feas} = \| \mathbf{A} \mathbf{x}_{pred} - \mathbf{b} \|_2^2
+    \end{equation}
+    \item \textbf{Optimality Gap Loss:} Penalize the difference between the predicted and true objective values.
+    \begin{equation}
+    \mathcal{L}_{opt} = | \mathbf{c}^T \mathbf{x}_{pred} - \mathbf{c}^T \mathbf{x}^* |
+    \end{equation}
+\end{itemize}
+A combined loss function could be $\mathcal{L} = \mathcal{L}_{MSE} + \lambda_1 \mathcal{L}_{feas} + \lambda_2 \mathcal{L}_{opt}$, where $\lambda_1, \lambda_2$ are weighting hyperparameters.
+
+\end{document}
+
+
+
+
+\section{Polynomial Optimization Formulation}
+
+The second benchmark problem involves optimizing (minimizing or maximizing) a multivariate polynomial function $P(\mathbf{x})$ over its domain, potentially $\mathbb{R}^d$ or a specified subset.
+
+\subsection{Problem Definition}
+Given a polynomial $P: \mathbb{R}^d \to \mathbb{R}$, the unconstrained optimization problem is:
+
+\begin{equation}
+\underset{\mathbf{x} \in \mathbb{R}^d}{\text{minimize}} \quad P(\mathbf{x})
+\end{equation}
+
+or maximize $P(\mathbf{x})$. A polynomial can be represented by its coefficients and the corresponding monomials. For example, a polynomial in $d$ variables up to degree $k$ can be written as:
+
+\begin{equation}
+P(\mathbf{x}) = \sum_{\substack{\alpha \in \mathbb{N}_0^d \\ |\alpha| \le k}} a_{\alpha} \mathbf{x}^{\alpha}
+\end{equation}
+where $\alpha = (\alpha_1, ..., \alpha_d)$ is a multi-index, $|\alpha| = \sum_{i=1}^d \alpha_i$, $\mathbf{x}^{\alpha} = x_1^{\alpha_1} x_2^{\alpha_2} \cdots x_d^{\alpha_d}$, and $a_{\alpha}$ are the coefficients.
+
+\subsection{NN Input Representation}
+To use an NN, the polynomial $P(\mathbf{x})$ needs to be represented as a fixed-size input vector. A common way is to use the vector of its coefficients $a_{\alpha}$ up to a maximum degree $k$ in a predefined order (e.g., lexicographical order of multi-indices $\alpha$). The dimension of this input vector depends on the number of variables $d$ and the maximum degree $k$.
+
+\subsection{NN Output}
+The output of the NN, $\mathbf{x}_{pred}$, is the predicted location of the optimum (e.g., the minimum) of the polynomial $P(\mathbf{x})$. The dimension of the output layer is $d$.
+
+\subsection{Loss Function}
+If the true optimum $\mathbf{x}^*$ is known (e.g., found analytically or via a numerical solver for training data generation), a suitable loss function is the Mean Squared Error (MSE) between the predicted and true optima:
+
+\begin{equation}
+\mathcal{L}_{MSE}(\mathbf{x}^*, \mathbf{x}_{pred}) = \frac{1}{d} \| \mathbf{x}^* - \mathbf{x}_{pred} \|_2^2
+\end{equation}
+
+Alternatively, if the goal is to minimize the polynomial value itself, the loss could be the value of the polynomial evaluated at the predicted optimum:
+
+\begin{equation}
+\mathcal{L}_{Value} = P(\mathbf{x}_{pred})
+\end{equation}
+This requires the polynomial $P$ (or its evaluation function) to be differentiable with respect to $\mathbf{x}_{pred}$ if gradient-based optimization is used for training the NN, which is generally true for polynomials.
+
+A combined loss might also be considered.
+

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project: Neural Networks for Optimization Benchmarks</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Project: Using Neural Networks for Optimization Benchmarks (LP & Polynomials)</h1>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="#intro">Introduction</a></li>
+            <li><a href="#lp">Linear Programming</a></li>
+            <li><a href="#poly">Polynomial Optimization</a></li>
+            <li><a href="#nn_common">NN Details</a></li>
+            <li><a href="#code">Experiment Code</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <section id="intro">
+            <h2>1. Introduction</h2>
+            <p>This project explores the potential of using trained Neural Networks (NNs) as surrogate optimizers for benchmark optimization problems, specifically focusing on high-dimensional Linear Programming (LP) and multivariate Polynomial Optimization. Traditional solvers, while often exact, can face computational challenges with increasing scale or complexity. Inspired by statistical learning concepts, this project investigates whether NNs can learn the mapping from problem parameters to optimal solutions for these distinct problem classes.</p>
+            <p>The core idea involves generating datasets of diverse problem instances and their corresponding optimal solutions (obtained via standard solvers or numerical methods). These datasets are then used to train NNs. The project defines series of experiments, increasing in complexity for both LP and polynomial optimization, to evaluate the feasibility, accuracy, and generalization capabilities of the NN-based approach. This webpage summarizes the project definition, including methodology, mathematical formulations, and experiment code structure.</p>
+        </section>
+
+        <section id="lp">
+            <h2>2. Benchmark 1: Linear Programming (LP)</h2>
+            
+            <subsection id="lp-problem">
+                <h3>2.1 Problem Definition (LP)</h3>
+                <p>Solving standard form Linear Programming (LP) problems, particularly high-dimensional instances. The problem is defined as:</p>
+                \[ \underset{\mathbf{x}}{\text{minimize}} \quad \mathbf{c}^T \mathbf{x} \]
+                \[ \text{subject to} \quad \mathbf{A} \mathbf{x} = \mathbf{b} \]
+                \[ \mathbf{x} \ge \mathbf{0} \]
+                <p>Where:</p>
+                <ul>
+                    <li>\( \mathbf{x} \in \mathbb{R}^n \) is the vector of decision variables.</li>
+                    <li>\( \mathbf{c} \in \mathbb{R}^n \) is the vector of objective function coefficients.</li>
+                    <li>\( \mathbf{A} \in \mathbb{R}^{m \times n} \) is the constraint matrix.</li>
+                    <li>\( \mathbf{b} \in \mathbb{R}^m \) is the vector of constraint right-hand side values.</li>
+                </ul>
+                 <p>The goal is to learn the mapping from the problem parameters \( (\mathbf{c}, \mathbf{A}, \mathbf{b}) \) to the optimal solution \( \mathbf{x}^* \).</p>
+            </subsection>
+
+            <subsection id="lp-methodology">
+                <h3>2.2 Methodology (LP)</h3>
+                <ol>
+                    <li><strong>Data Generation:</strong> Generate diverse, feasible, bounded high-dimensional LPs \( (\mathbf{c}, \mathbf{A}, \mathbf{b}) \) and solve for ground truth \( \mathbf{x}^* \) using SciPy's 'highs' solver.</li>
+                    <li><strong>Input/Output:</strong> Flatten \( (\mathbf{c}, \mathbf{A}, \mathbf{b}) \) into an input vector \( \mathbf{z} \in \mathbb{R}^{n + mn + m} \); output is predicted \( \mathbf{x}_{pred} \) (size n).</li>
+                    <li><strong>NN Architecture:</strong> Use a Multi-Layer Perceptron (MLP). Details in Section 4.</li>
+                    <li><strong>Training:</strong> Supervised learning with Mean Squared Error (MSE) loss: \( \mathcal{L}_{MSE} = \frac{1}{n} \| \mathbf{x}^* - \mathbf{x}_{pred} \|_2^2 \).</li>
+                    <li><strong>Evaluation:</strong> Metrics include solution accuracy (MSE/MAE), feasibility violation \( \| \mathbf{A} \mathbf{x}_{pred} - \mathbf{b} \|_2 \), optimality gap \( | \mathbf{c}^T \mathbf{x}_{pred} - \mathbf{c}^T \mathbf{x}^* | \), and inference time.</li>
+                </ol>
+            </subsection>
+
+            <subsection id="lp-experiments">
+                <h3>2.3 Experiment Outline (LP)</h3>
+                <ol>
+                    <li><strong>Fixed Low Dimensions & Simple Structure:</strong> Baseline (e.g., n=20, m=10).</li>
+                    <li><strong>Increasing Dimensions:</strong> Scalability test (e.g., n=50, 100, 200).</li>
+                    <li><strong>Varying Sparsity:</strong> Robustness to different matrix structures.</li>
+                    <li><strong>Exploring NN Architectures & Loss Functions:</strong> Optimize NN design.</li>
+                    <li><strong>Generalization Test:</strong> Performance on out-of-distribution data.</li>
+                </ol>
+            </subsection>
+        </section>
+
+        <section id="poly">
+            <h2>3. Benchmark 2: Polynomial Optimization</h2>
+
+            <subsection id="poly-problem">
+                <h3>3.1 Problem Definition (Polynomial)</h3>
+                <p>Finding the minimum (or maximum) value of a multivariate polynomial function \( P(\mathbf{x}) \) over its domain (e.g., \( \mathbb{R}^d \)).</p>
+                 \[ \underset{\mathbf{x} \in \mathbb{R}^d}{\text{minimize}} \quad P(\mathbf{x}) \]
+                <p>Where \( P(\mathbf{x}) \) is a polynomial in \( d \) variables up to degree \( k \):</p>
+                \[ P(\mathbf{x}) = \sum_{\substack{\alpha \in \mathbb{N}_0^d \\ |\alpha| \le k}} a_{\alpha} \mathbf{x}^{\alpha} \]
+                <p>Here, \( \alpha \) is a multi-index, \( a_{\alpha} \) are coefficients, and \( \mathbf{x}^{\alpha} = x_1^{\alpha_1} \cdots x_d^{\alpha_d} \). The goal is to learn the mapping from the polynomial's representation (e.g., coefficient vector \( \{a_{\alpha}\} \)) to the location of its optimum \( \mathbf{x}^* \).</p>
+            </subsection>
+
+            <subsection id="poly-methodology">
+                <h3>3.2 Methodology (Polynomial)</h3>
+                <ol>
+                    <li><strong>Polynomial Generation:</strong> Generate polynomials of varying degrees (k) and number of variables (d) by generating coefficients \( a_{\alpha} \).</li>
+                    <li><strong>Data Generation:</strong> For generated polynomials, find true optima \( \mathbf{x}^* \) numerically (e.g., using `scipy.optimize.minimize`). The dataset maps the coefficient vector to \( \mathbf{x}^* \). Monte Carlo methods can aid sampling or evaluation if needed.</li>
+                    <li><strong>Input/Output:</strong> Input is the vector of polynomial coefficients \( \{a_{\alpha}\} \); output is the predicted optimum location \( \mathbf{x}^*_{pred} \) (size d).</li>
+                    <li><strong>NN Architecture:</strong> Use an MLP. Details in Section 4.</li>
+                    <li><strong>Training:</strong> Supervised learning with MSE loss: \( \mathcal{L}_{MSE} = \frac{1}{d} \| \mathbf{x}^* - \mathbf{x}^*_{pred} \|_2^2 \), or potentially loss based on \( P(\mathbf{x}^*_{pred}) \).</li>
+                    <li><strong>Evaluation:</strong> Metrics include distance between optima \( \|\mathbf{x}^* - \mathbf{x}^*_{pred}\|_2 \) and difference in objective values \( |P(\mathbf{x}^*) - P(\mathbf{x}^*_{pred})| \).</li>
+                </ol>
+            </subsection>
+
+            <subsection id="poly-experiments">
+                <h3>3.3 Experiment Outline (Polynomial)</h3>
+                <ol>
+                    <li><strong>Simple Polynomials:</strong> Low-degree (e.g., quadratic) in 1 or 2 variables.</li>
+                    <li><strong>Increasing Degree/Variables:</strong> Gradually increase complexity (k and d).</li>
+                    <li><strong>Complex Landscapes:</strong> Test polynomials with multiple local minima/maxima.</li>
+                    <li><strong>Visualization:</strong> Use plots (e.g., contour plots for 2D) to show learned optima vs. true optima.</li>
+                </ol>
+            </subsection>
+        </section>
+
+        <section id="nn_common">
+            <h2>4. Neural Network Details (Common)</h2>
+            <p>A Multi-Layer Perceptron (MLP) is proposed for both benchmarks.</p>
+            <ul>
+                <li><strong>Input Layer:</strong> Size depends on the flattened representation of the problem (LP: \( n + mn + m \); Polynomial: number of coefficients).</li>
+                <li><strong>Hidden Layers:</strong> Sequence of dense layers with non-linear activation (e.g., ReLU: \( \sigma(a) = \max(0, a) \)). Layer \( l \) computes \( \mathbf{h}_l = \sigma_l(\mathbf{W}_l \mathbf{h}_{l-1} + \mathbf{b}_l) \).</li>
+                <li><strong>Output Layer:</strong> Size matches the dimension of the desired solution (LP: \( n \); Polynomial: \( d \)). Activation depends on problem (e.g., ReLU for LP's non-negativity, linear for Polynomials). \( \mathbf{x}_{pred} = \sigma_{out}(\mathbf{W}_{out} \mathbf{h}_L + \mathbf{b}_{out}) \).</li>
+                <li><strong>Loss Function:</strong> Primarily Mean Squared Error (MSE) between predicted and true solutions, as defined in the respective methodology sections.</li>
+            </ul>
+            <p>The exact number of hidden layers and neurons per layer are hyperparameters to be tuned during experimentation.</p>
+        </section>
+
+        <section id="code">
+            <h2>5. Experiment Code Structure</h2>
+            <p>A Python script (`lp_nn_experiments.py`) using NumPy, SciPy, TensorFlow/Keras, and Scikit-learn provides functions for both benchmarks. Key functions include:</p>
+            
+            <details>
+                <summary>Code: LP Generation (`generate_lp`)</summary>
+                <pre><code>
+def generate_lp(n, m, sparsity=0.1, ensure_feasible_bounded=True):
+    """Generates a random standard form LP problem (min c'x s.t. Ax=b, x>=0).
+    Attempts to generate a problem that is likely feasible and bounded (heuristic).
+    Returns: tuple (c, A, b) or None.
+    """
+    # ... (Generate c, A with sparsity) ...
+    if ensure_feasible_bounded:
+        # Generate a feasible point x_feasible > 0
+        x_feasible = np.random.rand(n) + 0.1
+        # Calculate b = Ax_feasible
+        b = A @ x_feasible
+        # ... (Heuristic check for boundedness) ...
+    else:
+        b = np.random.randn(m)
+    return c, A, b
+                </code></pre>
+            </details>
+
+            <details>
+                <summary>Code: LP Solver (`solve_lp`)</summary>
+                <pre><code>
+from scipy.optimize import linprog
+import time
+
+def solve_lp(c, A, b):
+    """Solves the LP problem using scipy.optimize.linprog ('highs' method).
+    Returns: tuple (x_optimal, fun_optimal, success, message, solve_time)
+    """
+    start_time = time.time()
+    bounds = [(0, None)] * len(c)
+    try:
+        result = linprog(c, A_eq=A, b_eq=b, bounds=bounds, method='highs')
+        solve_time = time.time() - start_time
+        if result.success:
+            return result.x, result.fun, True, result.message, solve_time
+        else:
+            return None, None, False, result.message, solve_time
+    except Exception as e:
+        # ... (handle error) ...
+        return None, None, False, f"Solver error: {e}", time.time() - start_time
+                </code></pre>
+            </details>
+
+            <details>
+                <summary>Code: Polynomial Generation (`generate_polynomial`)</summary>
+                <pre><code>
+from scipy.optimize import minimize
+from sklearn.preprocessing import PolynomialFeatures
+
+def generate_polynomial(degree, num_vars, domain_range=(-5, 5)):
+    """Generates a random polynomial function and finds its minimum numerically.
+    Returns: tuple (poly_func, coeff_vector, true_minimum_x, true_minimum_val) or None.
+    """
+    poly = PolynomialFeatures(degree=degree)
+    dummy_input = np.zeros((1, num_vars))
+    poly.fit(dummy_input)
+    num_coeffs = poly.n_output_features_
+    coeffs = (np.random.rand(num_coeffs) - 0.5) * 4 # Random coeffs
+    coeffs[0] = 0 # No constant term
+
+    def poly_func(x):
+        # ... (evaluate polynomial) ...
+        features = poly.transform(x.reshape(1, -1))
+        return (features @ coeffs)[0]
+
+    # Find minimum using numerical solver (e.g., BFGS) with multiple starts
+    best_min_val = float("inf")
+    best_min_x = None
+    solver_success = False
+    for _ in range(5):
+        x0 = np.random.uniform(domain_range[0], domain_range[1], size=num_vars)
+        try:
+            result = minimize(poly_func, x0, method="BFGS", options={"maxiter": 200})
+            if result.success and result.fun < best_min_val:
+                # ... (update best minimum found) ...
+                solver_success = True
+        except Exception:
+            pass
+
+    if solver_success:
+        return poly_func, coeffs, best_min_x, best_min_val
+    else:
+        return None
+                </code></pre>
+            </details>
+
+            <details>
+                <summary>Code: NN Model Building (`build_nn_model`)</summary>
+                <pre><code>
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+
+def build_nn_model(input_dim, output_dim, hidden_layers=[128, 64], output_activation='relu'):
+    """Builds a Keras MLP model.
+       output_activation: 'relu' for LP (non-negativity), 'linear' for Polynomials.
+    """
+    model = keras.Sequential(name="Optimizer_NN")
+    model.add(layers.Input(shape=(input_dim,), name="input_layer"))
+    for i, units in enumerate(hidden_layers):
+        model.add(layers.Dense(units, activation='relu', name=f"hidden_{i+1}"))
+    model.add(layers.Dense(output_dim, activation=output_activation, name="output_layer"))
+    model.compile(optimizer=keras.optimizers.Adam(learning_rate=1e-3),
+                  loss='mean_squared_error',
+                  metrics=['mean_absolute_error'])
+    return model
+                </code></pre>
+            </details>
+
+             <details>
+                <summary>Code: NN Training (`train_nn`)</summary>
+                <pre><code>
+def train_nn(model, X_train, y_train, X_val, y_val, epochs=50, batch_size=32):
+    """Trains the Keras model with early stopping.
+    Returns: Training history object.
+    """
+    callbacks = [
+        keras.callbacks.EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+    ]
+    history = model.fit(X_train, y_train,
+                        validation_data=(X_val, y_val),
+                        epochs=epochs,
+                        batch_size=batch_size,
+                        callbacks=callbacks,
+                        verbose=1)
+    return history
+                </code></pre>
+            </details>
+
+            <details>
+                <summary>Code: Evaluation (LP: `evaluate_nn`, Poly: `evaluate_nn_poly`)</summary>
+                <pre><code>
+def evaluate_nn(model, X_test, y_test, lp_params_test):
+    """Evaluates the trained model on the LP test set.
+    Calculates MSE, MAE, feasibility violation, optimality gap.
+    Returns: dict of metrics.
+    """
+    y_pred = model.predict(X_test)
+    # ... (calculate loss, mae) ...
+    feasibility_violations = []
+    optimality_gaps = []
+    for i in range(len(lp_params_test)):
+        c, A, b = lp_params_test[i]
+        x_pred_i = np.maximum(y_pred[i], 0) # Enforce non-negativity
+        x_true_i = y_test[i]
+        # Feasibility: ||Ax_pred - b||
+        constraint_violation = np.linalg.norm(A @ x_pred_i - b)
+        feasibility_violations.append(constraint_violation)
+        # Optimality Gap: |c'x_pred - c'x*|
+        obj_pred = c @ x_pred_i
+        obj_true = c @ x_true_i
+        optimality_gaps.append(abs(obj_pred - obj_true))
+    # ... (calculate averages) ...
+    return results_dict
+
+def evaluate_nn_poly(model, X_test_coeffs, y_test_optima, poly_funcs_test):
+    """Evaluates the trained model on the polynomial test set.
+    Calculates MSE, MAE for optima location, and difference in polynomial values.
+    Returns: dict of metrics.
+    """
+    y_pred_optima = model.predict(X_test_coeffs)
+    # ... (calculate loss, mae for optima location) ...
+    value_diffs = []
+    for i in range(len(poly_funcs_test)):
+        # ... (evaluate P(x_pred) and P(x*) and find difference) ...
+        val_pred = poly_funcs_test[i](y_pred_optima[i])
+        val_true = poly_funcs_test[i](y_test_optima[i])
+        value_diffs.append(abs(val_pred - val_true))
+    # ... (calculate averages) ...
+    return results_dict
+                </code></pre>
+            </details>
+            
+            <p>The script includes main execution guards (`if __name__ == "__main__":`) with example calls for `run_experiment` (LP) and `run_poly_experiment` (Polynomials), which need to be uncommented and modified to run specific experiments.</p>
+        </section>
+
+    </main>
+
+    <footer>
+        <p>Project Definition - May 2025</p>
+    </footer>
+</body>
+</html>
+

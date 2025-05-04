@@ -1,0 +1,40 @@
+# Project: Neural Networks for Optimization Benchmarks
+
+- [X] 1. Write Project Proposal (`project_proposal.md`)
+    - [X] 1.1. Introduction
+    - [X] 1.2. Problem Definition (High-Dimensional LP)
+    - [X] 1.3. Methodology (LP)
+    - [X] 1.4. Experiment Outline (LP)
+    - [X] 1.5. Deliverables (Initial)
+    - [X] 1.6. Add Polynomial Optimization Problem Description (`proposal_1_6_polyopt.md`)
+- [X] 2. Update Mathematical Documentation (`math_docs.tex`)
+    - [X] 2.1. LP Formulation (LaTeX)
+    - [X] 2.2. NN Architecture (LaTeX - General)
+    - [X] 2.3. Loss Function (LaTeX - General/LP)
+    - [X] 2.4. Polynomial Optimization Formulation (LaTeX)
+- [ ] 3. Update Python Code (`lp_nn_experiments.py`)
+    - [X] 3.1. LP Generation Function
+    - [X] 3.2. LP Solver Function (Ground Truth)
+    - [X] 3.3. NN Model Definition (TensorFlow/Keras - General)
+    - [X] 3.4. NN Training Function (General)
+    - [X] 3.5. NN Evaluation Function (LP)
+    - [X] 3.6. Experiment Structure (LP)
+    - [ ] 3.7. Polynomial Generation Function
+    - [ ] 3.8. Polynomial Solver Function (Ground Truth)
+    - [ ] 3.9. NN Evaluation Function (Polynomial)
+    - [ ] 3.10. Experiment Structure (Polynomial)
+- [ ] 4. Update Webpage (`index.html`, `style.css`)
+    - [X] 4.1. HTML Structure (LP Sections)
+    - [X] 4.2. Basic CSS Styling
+    - [ ] 4.3. Add Polynomial Optimization Section to HTML
+- [ ] 5. Compile Webpage Content
+    - [X] 5.1. Integrate LP Proposal Text into HTML
+    - [X] 5.2. Add LP Code Snippets/Link to HTML
+    - [X] 5.3. Add LP Math Overview/Link to HTML
+    - [ ] 5.4. Integrate Polynomial Proposal Text into HTML
+    - [ ] 5.5. Add Polynomial Code Snippets/Link to HTML
+    - [ ] 5.6. Add Polynomial Math Overview/Link to HTML
+- [ ] 6. Recompile Project Proposal (`project_proposal.md`)
+- [ ] 7. Final Review and Packaging (Updated)
+- [ ] 8. Deploy Webpage
+- [ ] 9. Send Deliverables (Updated) to User
